@@ -1,6 +1,3 @@
-# Главный файл для запуска!!!!
-
-
 import sys
 import fitz
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
