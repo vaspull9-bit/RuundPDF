@@ -524,14 +524,49 @@ class PDFViewerApp(QMainWindow):
                 QMessageBox.information(self, "Успех", f"Файл успешно сохранен как {QFileInfo(file_path).fileName()}.")
             except Exception as e:
                 QMessageBox.critical(self, "Ошибка сохранения", f"Не удалось сохранить файл. Ошибка: {e}")
-
     def print_file(self):
-        if not self.document: return
+        """Функция: Печать на принтере (QPainter метод, исправленный)."""
+        if not self.document:
+            return
+
         printer = QPainter()
         printDialog = QPrintDialog()
-        if printDialog.exec() == QDialog.Accepted:
-            # ... (Логика печати остается как в предыдущем коде) ...
-            pass # Use previous code logic here
+        
+        # Используем QDialog.DialogCode.Accepted
+        if printDialog.exec() == QDialog.DialogCode.Accepted:
+            printer.begin(printDialog.printer()) 
+            
+            for i in range(self.document.page_count):
+                page = self.document.load_page(i)
+                zoom_factor_print = 4
+                matrix = fitz.Matrix(zoom_factor_print, zoom_factor_print)
+                pix = page.get_pixmap(matrix=matrix, alpha=False)
+                qimage = QImage(pix.samples, pix.width, pix.height, pix.stride, QImage.Format.Format_RGB888)
+
+                if i > 0:
+                    printer.newPage()
+                
+                area = printer.viewport() 
+                size = qimage.size() 
+                
+                if size.width() > size.height():
+                    scale = area.width() / size.width()
+                else:
+                    scale = area.height() / size.height()
+                
+                # ИСПРАВЛЕНИЕ ОШИБКИ: Приводим float к int
+                width = int(scale * size.width())
+                height = int(scale * size.height())
+                
+                # Рисуем изображение, приводя координаты и размеры к int
+                printer.drawImage(
+                    int((area.width() - width) / 2), 
+                    int((area.height() - height) / 2), 
+                    qimage.scaled(width, height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                )
+
+            printer.end()
+            QMessageBox.information(self, "Печать", "Документ отправлен на печать.")
 
     # --- Закладки ---
     def add_bookmark(self):
