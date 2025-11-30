@@ -1,24 +1,37 @@
 import sys
 import fitz
+import os
+import threading
+import pyttsx3
+
+# --- 1. ФУНКЦИЯ ОПРЕДЕЛЕНИЯ ПУТИ К РЕСУРСАМ ---
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except AttributeError:
+        # Otherwise get path to the script file
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+# --- 2. ОБНОВЛЕННЫЕ ИМПОРТЫ ---
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QPushButton, QFileDialog, QLabel, QHBoxLayout, 
                              QSlider, QGraphicsScene, QGraphicsView, 
                              QGraphicsPixmapItem, QDialog, QTextEdit, 
                              QMessageBox, QToolBar, QFrame, QMenu,
                              QTabWidget, QGroupBox, QRadioButton, QLineEdit,
-                             QCheckBox, QInputDialog) # Добавил QInputDialog, который использовался внизу
+                             QCheckBox, QInputDialog)
 
 from PyQt6.QtGui import (QPixmap, QImage, QIcon, QAction, QPainter, 
                          QPageLayout, QPageSize, QDropEvent, QDragEnterEvent)
 
 from PyQt6.QtCore import Qt, QSize, QFileInfo, QSettings
-# Добавляем правильный импорт QPrintDialog
 from PyQt6.QtPrintSupport import QPrintDialog
-import pyttsx3
-import threading
-import os
 
-# --- Класс О программе ---
+
+# --- 3. КЛАСС О ПРОГРАММЕ ---
 
 class AboutDialog(QDialog):
     def __init__(self, parent=None):
@@ -27,25 +40,27 @@ class AboutDialog(QDialog):
         self.setGeometry(100, 100, 400, 250)
         layout = QVBoxLayout()
         label_icon = QLabel(self)
-        pixmap = QPixmap("icon.png").scaled(64, 64, Qt.AspectRatioMode.KeepAspectRatio)
+        
+        icon_path = resource_path("icon.png")
+        pixmap = QPixmap(icon_path).scaled(64, 64, Qt.AspectRatioMode.KeepAspectRatio)
         label_icon.setPixmap(pixmap)
         label_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(label_icon)
         info_text = QTextEdit(self)
         info_text.setReadOnly(True)
         info_text.setHtml("""
-            <p align='center'><strong>Программа RuundPDF v1.0.0</strong></p>
+            <p align='center'><strong>Программа RuundPDF v1.1.0</strong></p>
             <p align='center'>Права принадлежат DeeR Tuund (c) 2025 г.</p>
             <p>Описание возможностей:</p>
             <ul>
                 <li>Чтение PDF файлов</li>
-                <li>Выделение и копирование текста (через ПКМ)</li>
+                <li>Выделение и копирование текста</li>
                 <li>Озвучивание текста (полноценный плеер)</li>
-                <li>Режим Зум (слайдер)</li>
+                <li>Режим Зум</li>
                 <li>Поворот страницы</li>
                 <li>Печать файла</li>
                 <li>Сохранение копии файла</li>
-                <li>Листание страниц колесом мыши</li>
+                <li>Листание страниц колесом мыши/клавиатурой</li>
                 <li>Drag-and-Drop загрузка</li>
             </ul>
         """)
@@ -55,13 +70,13 @@ class AboutDialog(QDialog):
         layout.addWidget(btn_ok)
         self.setLayout(layout)
 
-# --- Класс Плеера Озвучки ---
+# --- 4. КЛАСС ПЛЕЕРА ОЗВУЧКИ ---
 
 class TTSPlayerDialog(QDialog):
     def __init__(self, parent=None, text_provider=None, document_info=None):
         super().__init__(parent)
         self.setWindowTitle("Плеер Озвучки")
-        self.setGeometry(200, 200, 450, 400) # Увеличиваем высоту окна
+        self.setGeometry(200, 200, 450, 400)
         self.text_provider = text_provider
         self.document_info = document_info
         self.tts_engine = pyttsx3.init()
@@ -70,14 +85,12 @@ class TTSPlayerDialog(QDialog):
         self.total_pages = document_info['total_pages']
         self.current_read_page = document_info['current_page']
         self.settings = QSettings("DeeRTuund", "RuundPDF")
-
         self.initUI()
         self.load_settings()
 
     def initUI(self):
         main_layout = QVBoxLayout()
 
-        # --- Блок управления плеером (Кнопки Плей/Пауза/Стоп) ---
         player_layout = QHBoxLayout()
         self.btn_start = QPushButton("▶️ Начать/Продолжить")
         self.btn_pause = QPushButton("⏸️ Пауза")
@@ -90,13 +103,11 @@ class TTSPlayerDialog(QDialog):
         player_layout.addWidget(self.btn_stop)
         main_layout.addLayout(player_layout)
 
-        # --- Блок навигации по страницам (внутри плеера) ---
         nav_layout = QHBoxLayout()
         self.btn_first = QPushButton("⏮️ В начало")
         self.btn_prev_page = QPushButton("⬅️ Стр. назад")
         self.btn_next_page = QPushButton("➡️ Стр. вперед")
         self.btn_last = QPushButton("⏭️ В конец")
-        # Эти кнопки просто меняют страницу, не запуская воспроизведение сразу
         self.btn_first.clicked.connect(lambda: self._set_current_read_page(0))
         self.btn_prev_page.clicked.connect(lambda: self._set_current_read_page(self.current_read_page - 1))
         self.btn_next_page.clicked.connect(lambda: self._set_current_read_page(self.current_read_page + 1))
@@ -107,10 +118,8 @@ class TTSPlayerDialog(QDialog):
         nav_layout.addWidget(self.btn_last)
         main_layout.addLayout(nav_layout)
         
-        # --- Настройки Диапазона Чтения (Группа 1) ---
         read_range_group = QGroupBox("Диапазон чтения")
         read_range_layout = QVBoxLayout()
-        
         self.radio_current = QRadioButton("Читать с текущей страницы")
         self.radio_start = QRadioButton("Читать сначала до конца")
         self.radio_specific = QRadioButton("Читать со страницы номер:")
@@ -118,40 +127,33 @@ class TTSPlayerDialog(QDialog):
         page_num_layout = QHBoxLayout()
         page_num_layout.addWidget(self.radio_specific)
         page_num_layout.addWidget(self.page_num_edit)
-        
         read_range_layout.addWidget(self.radio_current)
         read_range_layout.addWidget(self.radio_start)
         read_range_layout.addLayout(page_num_layout)
-        
         read_range_group.setLayout(read_range_layout)
         main_layout.addWidget(read_range_group)
 
-        # --- Настройки Голоса (Группа 2, отдельная) ---
         voice_group = QGroupBox("Настройки голоса")
         voice_layout = QHBoxLayout()
-        
         self.radio_voice_m = QRadioButton("Мужской")
         self.radio_voice_f = QRadioButton("Женский")
         self.radio_voice_m.toggled.connect(self.save_settings)
         self.radio_voice_f.toggled.connect(self.save_settings)
-
         voice_layout.addWidget(self.radio_voice_m)
         voice_layout.addWidget(self.radio_voice_f)
         voice_group.setLayout(voice_layout)
         main_layout.addWidget(voice_group)
         
         self.setLayout(main_layout)
-        self.radio_current.setChecked(True) # По умолчанию читаем с текущей страницы
+        self.radio_current.setChecked(True)
 
     def _set_current_read_page(self, page_num):
-        """Вспомогательная функция для навигации."""
         if 0 <= page_num < self.total_pages:
             self.current_read_page = page_num
             self.page_num_edit.setText(str(page_num + 1))
             QMessageBox.information(self, "Навигация", f"Перешли на страницу {page_num + 1}. Нажмите Play для чтения.")
 
     def load_settings(self):
-        # ... (логика загрузки голоса остается прежней) ...
         voice_id = self.settings.value("tts_voice_id", None)
         voices = self.tts_engine.getProperty('voices')
         for voice in voices:
@@ -165,24 +167,21 @@ class TTSPlayerDialog(QDialog):
              self.radio_voice_m.setChecked(True)
 
     def save_settings(self):
-        # ... (логика сохранения голоса остается прежней) ...
         voices = self.tts_engine.getProperty('voices')
         for voice in voices:
             is_male = 'male' in voice.name.lower()
             is_female = 'female' in voice.name.lower()
             if self.radio_voice_m.isChecked() and is_male:
                 self.settings.setValue("tts_voice_id", voice.id)
-                self.tts_engine.setProperty('voice', voice.id) # Применяем сразу
+                self.tts_engine.setProperty('voice', voice.id)
                 break
             if self.radio_voice_f.isChecked() and is_female:
                  self.settings.setValue("tts_voice_id", voice.id)
-                 self.tts_engine.setProperty('voice', voice.id) # Применяем сразу
+                 self.tts_engine.setProperty('voice', voice.id)
                  break
 
     def get_voice_id(self):
-        """Получение ID выбранного голоса."""
         voices = self.tts_engine.getProperty('voices')
-        
         for voice in voices:
             is_male = 'male' in voice.name.lower()
             is_female = 'female' in voice.name.lower()
@@ -190,18 +189,14 @@ class TTSPlayerDialog(QDialog):
                 return voice.id
             if self.radio_voice_f.isChecked() and is_female:
                 return voice.id
-        
-        # Если не нашли подходящий голос по критериям, возвращаем ID первого доступного голоса
-        return voices[0].id if voices else None
+        return voices[0].id if voices else None # Исправлено: возвращаем первый доступный ID
 
     def play_pause_resume(self):
-        # Применяем выбранный голос перед началом
         voice_id = self.get_voice_id()
         if voice_id:
             self.tts_engine.setProperty('voice', voice_id)
 
         if not self.is_playing or self.is_paused:
-            # Определяем, откуда читать, только при первом запуске или если не было паузы
             if not self.is_playing: 
                 if self.radio_start.isChecked():
                     self.current_read_page = 0
@@ -213,14 +208,11 @@ class TTSPlayerDialog(QDialog):
                     except ValueError:
                         QMessageBox.warning(self, "Ошибка ввода", "Неверный номер страницы.")
                         return
-                # self.radio_current уже установлен как стартовая страница при открытии плеера
 
             if not self.is_playing and not self.is_paused:
-                # Запуск нового потока
                 self.is_playing = True
                 threading.Thread(target=self._run_tts_loop).start()
             elif self.is_paused:
-                # Продолжение
                 self.tts_engine.resume()
                 self.is_paused = False
 
@@ -244,9 +236,7 @@ class TTSPlayerDialog(QDialog):
         self.btn_stop.setEnabled(False)
 
     def _run_tts_loop(self):
-        # Цикл чтения документа
         try:
-            # Используем self.current_read_page как стартовую точку
             for i in range(self.current_read_page, self.total_pages):
                 if not self.is_playing: break
                 text = self.text_provider(i)
@@ -263,16 +253,15 @@ class TTSPlayerDialog(QDialog):
         self.stop_speech()
         event.accept()
 
-
-# --- Основной класс приложения ---
+# --- 5. ОСНОВНОЙ КЛАСС ПРИЛОЖЕНИЯ ---
 
 class PDFViewerApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("RuundPDF - Величайший PDF Reader")
         self.setGeometry(100, 100, 1200, 800)
-        self.setWindowIcon(QIcon('icon.png'))
-        self.setAcceptDrops(True) # Включаем Drag-and-Drop
+        self.setWindowIcon(QIcon(resource_path('icon.png')))
+        self.setAcceptDrops(True)
 
         self.document = None
         self.file_path = None
@@ -280,19 +269,18 @@ class PDFViewerApp(QMainWindow):
         self.zoom_factor = 1.0
         self.rotation_angle = 0
         self.tts_engine = pyttsx3.init()
-        self.bookmarks = {} # {page_num: "Bookmark Name"}
+        self.bookmarks = {}
 
         self.initUI()
         self.apply_styles()
         self.disable_controls()
 
     def initUI(self):
-        # --- Панель инструментов ---
         toolbar = QToolBar("Основная панель")
         toolbar.setIconSize(QSize(24, 24))
         self.addToolBar(toolbar)
 
-        self.action_open = QAction(QIcon('icon.png'), "Открыть PDF", self)
+        self.action_open = QAction(QIcon(resource_path('icon.png')), "Открыть PDF", self)
         self.action_open.triggered.connect(self.open_file)
         toolbar.addAction(self.action_open)
 
@@ -324,7 +312,6 @@ class PDFViewerApp(QMainWindow):
         self.action_rotate_right.triggered.connect(lambda: self.rotate_page(90))
         toolbar.addAction(self.action_rotate_right)
 
-        # Кнопка плеера озвучки
         self.action_speak = QAction("Открыть плеер озвучки", self)
         self.action_speak.triggered.connect(self.show_tts_player)
         toolbar.addAction(self.action_speak)
@@ -335,18 +322,15 @@ class PDFViewerApp(QMainWindow):
         self.action_about.triggered.connect(self.show_about_dialog)
         toolbar.addAction(self.action_about)
 
-        # --- Главное меню: Закладки ---
         menubar = self.menuBar()
         bookmarks_menu = menubar.addMenu('&Закладки')
         self.action_add_bookmark = QAction("Добавить закладку на текущую страницу", self)
         self.action_add_bookmark.triggered.connect(self.add_bookmark)
         bookmarks_menu.addAction(self.action_add_bookmark)
         bookmarks_menu.addSeparator()
-        self.bookmarks_submenu = QMenu(self) # Submenu for dynamic bookmarks
+        self.bookmarks_submenu = QMenu(self)
         bookmarks_menu.addMenu(self.bookmarks_submenu)
 
-
-        # --- Основной макет и Зум ---
         central_widget = QWidget()
         main_layout = QVBoxLayout()
         central_widget.setLayout(main_layout)
@@ -364,9 +348,8 @@ class PDFViewerApp(QMainWindow):
         zoom_layout.addWidget(self.zoom_value_label)
         main_layout.addLayout(zoom_layout)
 
-        # --- Область отображения PDF ---
         self.scene = QGraphicsScene(self)
-        self.view = PDFGraphicsView(self.scene, self) # Используем кастомный класс для обработки колеса
+        self.view = PDFGraphicsView(self.scene, self)
         self.view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.view.customContextMenuRequested.connect(self.show_context_menu)
         main_layout.addWidget(self.view)
@@ -374,7 +357,6 @@ class PDFViewerApp(QMainWindow):
         self.current_pixmap_item = None
 
     def apply_styles(self):
-        """Серый тулбар, черные символы."""
         self.setStyleSheet("""
             QMainWindow { background-color: #f0f0f0; }
             QPushButton {
@@ -404,7 +386,6 @@ class PDFViewerApp(QMainWindow):
         for control in controls:
             control.setEnabled(True)
     
-    # --- Drag and Drop реализация ---
     def dragEnterEvent(self, event: QDragEnterEvent):
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
@@ -415,6 +396,18 @@ class PDFViewerApp(QMainWindow):
             if file_path.lower().endswith('.pdf'):
                 self.open_file(file_path)
                 return
+
+    def keyPressEvent(self, event):
+        """Обработка нажатий клавиш клавиатуры для навигации."""
+        # Используем новые enum имена для клавиш в PyQt6
+        if event.key() == Qt.Key.Key_PageDown or event.key() == Qt.Key.Key_Down:
+            self.next_page()
+            event.accept()
+        elif event.key() == Qt.Key.Key_PageUp or event.key() == Qt.Key.Key_Up:
+            self.prev_page()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
     def open_file(self, file_path=None):
         if not file_path:
@@ -432,18 +425,6 @@ class PDFViewerApp(QMainWindow):
                 self.update_bookmarks_menu()
             except Exception as e:
                 QMessageBox.critical(self, "Ошибка загрузки", f"Не удалось открыть файл. Ошибка: {e}")
-
-
-    def keyPressEvent(self, event):
-        """Обработка нажатий клавиш клавиатуры для навигации."""
-        if event.key() == Qt.Key.Key_PageDown or event.key() == Qt.Key.Key_Down:
-            self.next_page()
-            event.accept()
-        elif event.key() == Qt.Key.Key_PageUp or event.key() == Qt.Key.Key_Up:
-            self.prev_page()
-            event.accept()
-        else:
-            super().keyPressEvent(event)            
 
     def render_page(self):
         if not self.document:
@@ -484,18 +465,15 @@ class PDFViewerApp(QMainWindow):
         self.render_page()
     
     def get_text_for_page(self, page_num):
-        """Callback функция для TTS плеера."""
         if self.document and 0 <= page_num < self.document.page_count:
             page = self.document.load_page(page_num)
             return page.get_text()
         return ""
 
     def show_tts_player(self):
-        """Функция: Открытие плеера озвучки."""
         if not self.document:
             QMessageBox.warning(self, "Плеер", "Сначала откройте PDF-файл.")
             return
-        
         doc_info = {
             'total_pages': self.document.page_count,
             'current_page': self.current_page_num
@@ -503,7 +481,6 @@ class PDFViewerApp(QMainWindow):
         player_dialog = TTSPlayerDialog(self, self.get_text_for_page, doc_info)
         player_dialog.exec()
 
-    # --- Сохранить и Печать ---
     def save_file(self):
         if self.document and self.file_path:
             self.document.save(self.file_path, garbage=4, deflate=True) 
@@ -521,51 +498,21 @@ class PDFViewerApp(QMainWindow):
                 QMessageBox.information(self, "Успех", f"Файл успешно сохранен как {QFileInfo(file_path).fileName()}.")
             except Exception as e:
                 QMessageBox.critical(self, "Ошибка сохранения", f"Не удалось сохранить файл. Ошибка: {e}")
+
     def print_file(self):
-        """Функция: Печать на принтере (QPainter метод, исправленный)."""
-        if not self.document:
+        """Функция: Печать на принтере (Упрощенный метод через fitz)."""
+        if not self.document or not self.file_path:
+            QMessageBox.warning(self, "Печать", "Сначала откройте PDF-файл.")
             return
 
-        printer = QPainter()
-        printDialog = QPrintDialog()
-        
-        # Используем QDialog.DialogCode.Accepted
-        if printDialog.exec() == QDialog.DialogCode.Accepted:
-            printer.begin(printDialog.printer()) 
-            
-            for i in range(self.document.page_count):
-                page = self.document.load_page(i)
-                zoom_factor_print = 4
-                matrix = fitz.Matrix(zoom_factor_print, zoom_factor_print)
-                pix = page.get_pixmap(matrix=matrix, alpha=False)
-                qimage = QImage(pix.samples, pix.width, pix.height, pix.stride, QImage.Format.Format_RGB888)
+        try:
+            # Используем встроенную функцию fitz для печати файла напрямую через Windows API
+            # process=False означает, что мы используем стандартный диалог печати Windows
+            fitz.print(self.file_path, process=False)
 
-                if i > 0:
-                    printer.newPage()
-                
-                area = printer.viewport() 
-                size = qimage.size() 
-                
-                if size.width() > size.height():
-                    scale = area.width() / size.width()
-                else:
-                    scale = area.height() / size.height()
-                
-                # ИСПРАВЛЕНИЕ ОШИБКИ: Приводим float к int
-                width = int(scale * size.width())
-                height = int(scale * size.height())
-                
-                # Рисуем изображение, приводя координаты и размеры к int
-                printer.drawImage(
-                    int((area.width() - width) / 2), 
-                    int((area.height() - height) / 2), 
-                    qimage.scaled(width, height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                )
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка печати", f"Не удалось отправить файл на печать. Ошибка: {e}")
 
-            printer.end()
-            QMessageBox.information(self, "Печать", "Документ отправлен на печать.")
-
-    # --- Закладки ---
     def add_bookmark(self):
         if not self.document: return
         page_num = self.current_page_num
@@ -581,19 +528,15 @@ class PDFViewerApp(QMainWindow):
             action.triggered.connect(lambda checked, pn=page_num: self.goto_page(pn))
             self.bookmarks_submenu.addAction(action)
 
-
     def show_context_menu(self, pos):
-        # ... (Код контекстного меню остается прежним) ...
         context_menu = QMenu(self)
         action_copy_all = QAction("Копировать весь текст страницы", self)
         action_copy_all.triggered.connect(self.copy_all_text)
         context_menu.addAction(action_copy_all)
 
         action_speak_all = QAction("Озвучить весь текст страницы (текст)", self)
-        # Привязываем к функции открытия плеера для согласованности
         action_speak_all.triggered.connect(self.show_tts_player) 
         context_menu.addAction(action_speak_all)
-
         context_menu.exec(self.view.mapToGlobal(pos))
 
     def copy_all_text(self):
@@ -605,41 +548,36 @@ class PDFViewerApp(QMainWindow):
         about_dialog = AboutDialog(self)
         about_dialog.exec()
 
-# --- Кастомный QGraphicsView для обработки колеса мыши ---
+# --- 6. КАСТОМНЫЙ QGraphicsView ДЛЯ КОЛЕСА МЫШИ ---
 
 class PDFGraphicsView(QGraphicsView):
     def __init__(self, scene, main_app):
         super().__init__(scene)
         self.main_app = main_app
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-        self.setAcceptDrops(True) # Включаем Drag-and-Drop для самой области просмотра тоже
+        self.setAcceptDrops(True)
 
-    # Обработка колеса мыши для прокрутки/листания
     def wheelEvent(self, event):
         if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
-            # Если зажат Ctrl, делаем зум
             delta = event.angleDelta().y()
             if delta > 0:
                 self.main_app.zoom_slider.setValue(self.main_app.zoom_slider.value() + 10)
             elif delta < 0:
                 self.main_app.zoom_slider.setValue(self.main_app.zoom_slider.value() - 10)
         else:
-            # Иначе, листаем страницы
             delta = event.angleDelta().y()
             if delta > 0:
                 self.main_app.prev_page()
             elif delta < 0:
                 self.main_app.next_page()
-            # Важно принять событие, чтобы оно не проваливалось дальше
             event.accept()
 
+# --- 7. БЛОК ЗАПУСКА ---
 
 if __name__ == '__main__':
-    if not os.path.exists('icon.png'):
-        print("ВНИМАНИЕ: Файл icon.png не найден! Интерфейс будет работать, но без иконок.")
-    
-    # Нужен QInputDialog для закладок, его тоже надо импортировать
-    from PyQt6.QtWidgets import QInputDialog
+    # Эта проверка больше не нужна благодаря resource_path()
+    # if not os.path.exists('icon.png'):
+    #     print("ВНИМАНИЕ: Файл icon.png не найден!")
     
     app = QApplication(sys.argv)
     ex = PDFViewerApp()
