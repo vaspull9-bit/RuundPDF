@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['app_main_v2.1.py'],
+    ['app_main_v2.9.1.py'],
     pathex=[],
     binaries=[],
     datas=[('icon.png', '.')],
@@ -35,4 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=['icon.ico'],
 )
