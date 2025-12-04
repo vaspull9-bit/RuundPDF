@@ -240,6 +240,23 @@ class TTSConfigDialog(QDialog):
         
         voice_group.setLayout(voice_layout)
         main_layout.addWidget(voice_group)
+
+        # Группа языковых настроек (ДОБАВЛЯЕМ ЭТОТ БЛОК)
+        language_group = QGroupBox("Языковые настройки")
+        language_layout = QVBoxLayout()
+        
+        self.check_auto_lang = QCheckBox("Автоматическое определение языка")
+        self.check_auto_lang.setToolTip("Автоматически определять язык текста и выбирать соответствующий голос")
+        self.check_auto_lang.setChecked(True)
+        
+        language_layout.addWidget(self.check_auto_lang)
+        language_group.setLayout(language_layout)
+        main_layout.addWidget(language_group)
+        
+        # Дополнительные настройки
+        extra_group = QGroupBox("Дополнительные настройки")
+        extra_layout = QVBoxLayout()
+
         
         # Кнопки
         btn_layout = QHBoxLayout()
@@ -265,20 +282,28 @@ class TTSConfigDialog(QDialog):
             self.radio_current.setChecked(True)
     
     def load_settings(self):
-        """Загружает настройки из реестра."""
-        use_male = self.player.settings.value("tts_use_male", True, type=bool)
-        use_female = self.player.settings.value("tts_use_female", False, type=bool)
+        """Загружает настройки из реестра"""
+        settings = QSettings("DeeRTuund", "RuundPDF")
+        use_female = settings.value("tts_use_female", False, type=bool)
+        auto_lang = settings.value("tts_auto_language", True, type=bool)
         
         if use_female:
             self.radio_female.setChecked(True)
         else:
             self.radio_male.setChecked(True)
+        
+        self.check_auto_lang.setChecked(auto_lang)
     
     def apply_settings(self):
         """Применяет выбранные настройки."""
         # Сохраняем выбор голоса
+        settings = QSettings("DeeRTuund", "RuundPDF")
+        settings.setValue("tts_use_female", self.radio_female.isChecked())
+        settings.setValue("tts_auto_language", self.check_auto_lang.isChecked())
+        
         self.player.settings.setValue("tts_use_male", self.radio_male.isChecked())
         self.player.settings.setValue("tts_use_female", self.radio_female.isChecked())
+
         
         # Устанавливаем режим чтения
         if self.radio_start.isChecked():

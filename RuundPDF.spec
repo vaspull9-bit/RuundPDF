@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['app_main_v2.9.2.py'],
+    ['app_main_v3.0.0.py'],
     pathex=[],
     binaries=[],
     datas=[('icon.png', '.')],

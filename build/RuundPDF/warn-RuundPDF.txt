@@ -37,6 +37,7 @@ missing module named multiprocessing.TimeoutError - imported by multiprocessing 
 missing module named multiprocessing.set_start_method - imported by multiprocessing (top-level), multiprocessing.spawn (top-level)
 missing module named multiprocessing.get_start_method - imported by multiprocessing (top-level), multiprocessing.spawn (top-level)
 missing module named pyimod02_importers - imported by C:\Users\trii\AppData\Local\Programs\Python\Python313\Lib\site-packages\PyInstaller\hooks\rthooks\pyi_rth_pkgutil.py (delayed)
+missing module named langdetect - imported by C:\Projects\RuundPDF\app_main_v3.0.0.py (top-level)
 missing module named comtypes.gen.SpeechLib - imported by comtypes.gen (optional), pyttsx3.drivers.sapi5 (optional)
 missing module named 'numpy.ctypeslib' - imported by comtypes._npsupport (delayed)
 missing module named numpy - imported by PIL._typing (conditional, optional), comtypes._npsupport (delayed, conditional)
